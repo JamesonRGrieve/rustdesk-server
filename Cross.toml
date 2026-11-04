@@ -1,4 +1,0 @@
-# Soft-fork addition (fork-release.yml): hbb_common is a build-dependency of hbbs, so cross compiles it, and through
-# tokio-native-tls openssl-sys, for the host inside its container, which has no OpenSSL headers.
-[target.x86_64-unknown-linux-musl]
-pre-build = ["apt-get update && apt-get install -y --no-install-recommends libssl-dev pkg-config"]
