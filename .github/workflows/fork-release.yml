@@ -1,7 +1,7 @@
 # Soft-fork release (JamesonRGrieve/rustdesk-server): linux amd64 only, published (not draft) so a server can fetch it.
 # Built natively for glibc, not with cross for musl: hbb_common's websocket TLS (tokio-native-tls) pulls openssl-sys
 # into the target, and musl can't use the runner's OpenSSL headers. The binaries need glibc >= 2.35 and libssl3
-# (Debian trixie has both).
+# (Debian trixie has both); libsodium is linked statically.
 # Same asset layout as upstream's build.yaml (rustdesk-server-linux-amd64.zip containing amd64/hbbs and amd64/hbbr), so an
 # installer that takes upstream releases takes these too. Tags are `<upstream version>-control.<n>`, which upstream's
 # build.yaml tag patterns never match, so only this workflow runs for a fork release.
@@ -40,12 +40,17 @@ jobs:
       - name: OpenSSL headers
         run: |
           sudo apt-get update
-          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends libssl-dev pkg-config
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y --no-install-recommends libssl-dev pkg-config libsodium-dev
 
       - name: Test
         run: cargo test --locked
 
+      # libsodium-sys builds its bundled libsodium and runs its `make check` in release builds, which fails on the
+      # runner's newer GCC; link the system libsodium statically instead (no runtime dependency).
       - name: Build
+        env:
+          SODIUM_LIB_DIR: /usr/lib/x86_64-linux-gnu
+          SODIUM_STATIC: "1"
         run: cargo build --release --locked --all-features
 
       - name: Pack
