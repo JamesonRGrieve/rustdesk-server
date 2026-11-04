@@ -1,0 +1,67 @@
+# Soft-fork release (JamesonRGrieve/rustdesk-server): linux amd64 only, published (not draft) so a server can fetch it.
+# Same asset layout as upstream's build.yaml (rustdesk-server-linux-amd64.zip containing amd64/hbbs and amd64/hbbr), so an
+# installer that takes upstream releases takes these too. Tags are `<upstream version>-control.<n>`, which upstream's
+# build.yaml tag patterns never match, so only this workflow runs for a fork release.
+name: fork-release
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+-control.[0-9]+'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: Build and release linux amd64
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: "stable"
+          override: true
+          default: true
+          profile: minimal
+          target: x86_64-unknown-linux-musl
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --locked
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features --target=x86_64-unknown-linux-musl
+          use-cross: true
+
+      - name: Pack
+        run: |
+          mkdir amd64
+          cp target/x86_64-unknown-linux-musl/release/hbbs target/x86_64-unknown-linux-musl/release/hbbr target/x86_64-unknown-linux-musl/release/rustdesk-utils amd64/
+          chmod -v a+x amd64/*
+          sudo apt-get update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y zip
+          zip rustdesk-server-linux-amd64.zip amd64/*
+          sha256sum rustdesk-server-linux-amd64.zip | tee rustdesk-server-linux-amd64.zip.sha256
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          files: |
+            rustdesk-server-linux-amd64.zip
+            rustdesk-server-linux-amd64.zip.sha256
