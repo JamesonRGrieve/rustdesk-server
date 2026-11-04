@@ -49,8 +49,8 @@ jobs:
       # runner's newer GCC; link the system libsodium statically instead (no runtime dependency).
       - name: Build
         env:
+          # Static by default with SODIUM_LIB_DIR (libsodium-sys 0.2.7 panics if the old SODIUM_STATIC is set).
           SODIUM_LIB_DIR: /usr/lib/x86_64-linux-gnu
-          SODIUM_STATIC: "1"
         run: cargo build --release --locked --all-features
 
       - name: Pack
